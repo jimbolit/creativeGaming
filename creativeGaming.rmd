@@ -1,1 +1,58 @@
-## this is a files
+---
+title: "ASSIGNMENT NAME"      # Replace with name of assignment
+author: 
+   - name: Section XX         # Replace with your section number
+   - name: Team member 1
+   - name: Team member 2
+   - name: Team member 3      # add/delete rows for more/fewer names as needed. 
+output:
+  html_notebook: default
+---
+
+# Preliminaries
+
+### Determine notebook defaults:
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE,      # Print all the code in all the chunks
+                      warning=FALSE,  # Don't print warning statements
+                      message=FALSE,  # Don't print other R output messages
+                      comment=NA)     # Helps produce prettier output
+```
+
+### Load packages:
+```{r, echo=FALSE, message = FALSE, warning = FALSE}
+library(gmodels)
+library(modelr)
+library(janitor)
+library(haven)
+library(readxl)
+library(knitr)
+library(psych)
+library(statar)
+library(tidyverse)
+```
+
+### Read in the data:
+```{r}
+# use load("filename.Rdata") for .Rdata files
+
+```
+
+# Assignment answers
+
+## Question 1
+
+Type your answer text here, intervowen with blocks of R code
+
+```{r}
+
+```
+
+## Question 2
+
+Type your answer text here, intervowen with blocks of R code
+
+
+```{r}
+
+```
