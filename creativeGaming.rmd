@@ -36,6 +36,7 @@ library(openxlsx)
 library(scales)
 library(dplyr)
 library(skimr)
+library(nnet)
 ```
 
 ### Read in the data:
@@ -259,6 +260,62 @@ The organic model did not take into account the fact that these factors would ch
 
 
 
+## Part IV
+
+### Question 1
+
+Train a neural network on the sample of customers who were exposed to the ad campaign
+
+```{r}
+set.seed(1234)
+nn_cg <- nnet(fm, data=cg_ad_random, size=5, decay=0.1, maxit=1000)
+```
+
+```{r}
+cg_ad_scoring <- cg_ad_scoring %>%
+mutate(pred_nn = predict(nn_cg, newdata=cg_ad_scoring, type="raw")[,1])
+```
 
 
+### Question 2
 
+Compare the performance of the neural network “ad” model and the logistic “ad” model from Part 4 on the “cg_ad_scoring” sample. Use gains curves and AUC to make the comparison. What do you find?
+
+
+``` {r}
+gainsplot(cg_ad_scoring$pred_nn, cg_ad_scoring$pred_lr, label.var = cg_ad_scoring$converted)
+```
+
+The neural network has a higher AUC than the logistic regression, at 77.8% versus 70.3%. This means that the neural network performs better than the logistic regression.
+
+```{r}
+cg_ad_scoring <- cg_ad_scoring %>%
+   arrange(-pred_nn)
+cg_best_nn <-  cg_ad_scoring %>% slice(1:30000)
+
+cg_ad_scoring <- cg_ad_scoring %>%
+   arrange(-pred_lr)
+cg_best_lr <-  cg_ad_scoring %>% slice(1:30000)
+```
+
+```{r}
+nnConvertVar <- (cg_best_nn %>% summarise(nnConvert = mean(converted)))$nnConvert
+cat("Neural network selection response rate to Zalon: ", percent(nnConvertVar, .01))
+
+profitNn <- nrow(cg_best_nn) * (nnConvertVar* revenuePerPurchase - costToServeAd)
+cat("\nProfit from Neural network selelection: ", dollar(profitNn, .01))
+
+cat("\n")
+
+lrConvertVar <- (cg_best_lr %>% summarise(lrConvert = mean(converted)))$lrConvert
+cat("\nLogistic regression selection response rate to Zalon: ", percent(lrConvertVar, .01))
+
+profitLr <- nrow(cg_best) * (bestConvertVar* revenuePerPurchase - costToServeAd)
+cat("\nProfit from logistic regression selelection: ", dollar(profitLr, .01))
+
+cat("\n")
+profitDif <- profitNn - profitLr
+cat("\nProfit improvement from using neural network: ", dollar(profitDif, .01))
+```
+
+The profit uplift from using a neural network versus a logistic regression across 30,000 people is ~$16K
