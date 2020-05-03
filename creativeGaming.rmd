@@ -1,10 +1,10 @@
 ---
 title: "ASSIGNMENT NAME"      # Replace with name of assignment
 author: 
-   - name: Section XX         # Replace with your section number
-   - name: Team member 1
-   - name: Team member 2
-   - name: Team member 3      # add/delete rows for more/fewer names as needed. 
+   - name: Section 81         # Replace with your section number
+   - name: James Little
+   - name: Mario Estrada
+   - name: Greg Schiffenhaus       # add/delete rows for more/fewer names as needed. 
 output:
   html_notebook: default
 ---
@@ -30,29 +30,83 @@ library(knitr)
 library(psych)
 library(statar)
 library(tidyverse)
+library(sjPlot)
+library(mktg482) 
+library(openxlsx)
+library(scales)
+library(dplyr)
+library(skimr)
 ```
 
 ### Read in the data:
 ```{r}
-# use load("filename.Rdata") for .Rdata files
-
+load("creative_gaming.Rdata") 
 ```
 
 # Assignment answers
 
-## Question 1
+### Part I
 
-Type your answer text here, intervowen with blocks of R code
+### Question 1
+
+What is the organic probability of converting to Zalon?
 
 ```{r}
+organicConvertVar <- (cg_organic %>% summarise(organicConvert = mean(converted)))$organicConvert
+cat("Organic probability of converting to Zalon: ", percent(organicConvertVar, .01))
+```
+
+### Question 2
+
+For each feature, show basic summary statistics.
+
+```{r}
+skim_without_charts(cg_organic)
+```
+
+## Part II
+
+## Question 1
+
+Create a training and test sample based on the “cg_organic” dataframe. What is the training/test split?
+
+```{r}
+cg_organic_train <- cg_organic[sample_train_org,] 
+cg_organic_test <- cg_organic[-sample_train_org,]
+
+nrow(cg_organic_train)
+nrow(cg_organic_train)/nrow(cg_organic)
+nrow(cg_organic_test)
+nrow(cg_organic_test)/nrow(cg_organic)
 
 ```
 
 ## Question 2
 
-Type your answer text here, intervowen with blocks of R code
-
+Train a logistic regression model using all features
 
 ```{r}
+ lr <- glm(converted ~ GameLevel + NumGameDays + NumGameDays4Plus + NumInGameMessagesSent + NumFriends + NumFriendRequestIgnored + NumSpaceHeroBadges + AcquiredSpaceship + AcquiredIonWeapon + TimesLostSpaceship + TimesKilled + TimesCaptain + TimesNavigator + PurchasedCoinPackSmall + PurchasedCoinPackLarge + NumAdsClicked + DaysUser + UserNoConsole + UserHasOldOS , data = cg_organic_train)
+summary(lr)
 
 ```
+```{r}
+plot_model(lr, show.values = TRUE, transform = NULL)
+```
+
+
+```{r fig2, fig.height = 3, fig.width = 3, fig.align = "center"}
+plot_model(lr, type= "eff")
+```
+
+```{r}
+varimp.logistic(lr) %>% plotimp.logistic()
+```
+
+The 5 most important features are
+- Number of space hero badges
+- Number of friend requests ignored
+- Times lost spaceship
+- Acquired ion weapon
+- Acquired spaceship
+
