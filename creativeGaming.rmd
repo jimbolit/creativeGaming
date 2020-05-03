@@ -104,9 +104,96 @@ varimp.logistic(lr) %>% plotimp.logistic()
 ```
 
 The 5 most important features are
-- Number of space hero badges
-- Number of friend requests ignored
-- Times lost spaceship
-- Acquired ion weapon
-- Acquired spaceship
+- Number of space hero badges: the more badges the more likely to purchase
+- Number of friend requests ignored: more friend requests ignored means less likely to purchase
+- Times lost spaceship: more times a spaceship has been lost the less likely to purchase
+- Acquired ion weapon: acquired ion weapon means more likely to purchase
+- Acquired spaceship: acquired spaceship means more likely to purchase
+
+``` {r}
+pred_lr_test <- predict(lr, newdata=cg_organic_test, type="response")
+gainsplot(pred_lr_test, label.var = cg_organic_test$converted)
+```
+
+
+## Part 3
+
+### Question 1
+
+Calculate the response rate and profit of the control group not sent an ad
+
+```{r}
+revenuePerPurchase <- 14.99
+costToServeAd <- 1.5
+
+controlConvertVar <- (cg_organic_control %>% summarise(controlConvert = mean(converted)))$controlConvert
+cat("Control response rate to Zalon: ", percent(controlConvertVar, .01))
+
+profitControl <- nrow(cg_organic_control) * controlConvertVar* revenuePerPurchase
+cat("\nProfit: ", dollar(profitControl, .01))
+
+```
+
+### Question 2
+
+Calculate the response rate and profit of the randomly selected customers who were sent the ad
+
+```{r}
+cg_ad_random <- cg_ad_treatment[sample_random_30000,]
+
+adConvertVar <- (cg_ad_random %>% summarise(adConvert = mean(converted)))$adConvert
+cat("Ad treatment response rate to Zalon: ", percent(adConvertVar, .01))
+
+profitAd <- nrow(cg_ad_random) * (adConvertVar* revenuePerPurchase - costToServeAd)
+cat("\nProfit: ", dollar(profitAd, .01))
+```
+
+### Question 3
+
+ Calculate the response rate and profit of the customers from the remaining sample with the highest probability to buy according to the model
+ 
+```{r}
+cg_ad_scoring <- cg_ad_treatment[-sample_random_30000,]
+
+cg_ad_scoring <- cg_ad_scoring %>% mutate(pred_prob = predict(lr, newdata=cg_ad_scoring, type="response"))
+
+cg_ad_scoring <- cg_ad_scoring %>% arrange(desc(pred_prob))
+
+cg_best <- head(cg_ad_scoring, 30000)
+
+
+```
+
+
+```{r}
+bestConvertVar <- (cg_best %>% summarise(bestConvert = mean(converted)))$bestConvert
+cat("Ad treatment response rate to Zalon: ", percent(bestConvertVar, .01))
+
+profitBest <- nrow(cg_best) * (bestConvertVar* revenuePerPurchase - costToServeAd)
+cat("\nProfit: ", dollar(profitBest, .01))
+```
+
+
+### Question 4
+
+In summary:
+
+- without any advertising, we can expect 5.7% of people to buy Zalon. Across 30,000 people this equates to ~$26K in profits
+
+- with advertising to everyone, we can expect 13.0% of people to buy Zalon. Across a sample of 30,000 people this equates to ~$14K in profits
+
+- with targeted advertising to the most likely 30,000 people from a set of 120,000 we can expect 21.0% of people to buy Zalon, and a profit of ~$49K
+
+
+
+
+
+
+
+
+
+
+
+
+
 
