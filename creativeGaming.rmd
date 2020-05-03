@@ -86,7 +86,9 @@ nrow(cg_organic_test)/nrow(cg_organic)
 Train a logistic regression model using all features
 
 ```{r}
- lr <- glm(converted ~ GameLevel + NumGameDays + NumGameDays4Plus + NumInGameMessagesSent + NumFriends + NumFriendRequestIgnored + NumSpaceHeroBadges + AcquiredSpaceship + AcquiredIonWeapon + TimesLostSpaceship + TimesKilled + TimesCaptain + TimesNavigator + PurchasedCoinPackSmall + PurchasedCoinPackLarge + NumAdsClicked + DaysUser + UserNoConsole + UserHasOldOS , data = cg_organic_train)
+fm <- as.formula(converted ~ GameLevel + NumGameDays + NumGameDays4Plus + NumInGameMessagesSent + NumFriends + NumFriendRequestIgnored + NumSpaceHeroBadges + AcquiredSpaceship + AcquiredIonWeapon + TimesLostSpaceship + TimesKilled + TimesCaptain + TimesNavigator + PurchasedCoinPackSmall + PurchasedCoinPackLarge + NumAdsClicked + DaysUser + UserNoConsole + UserHasOldOS)
+
+lr <- glm(fm , family = binomial, data = cg_organic_train)
 summary(lr)
 
 ```
@@ -105,9 +107,9 @@ varimp.logistic(lr) %>% plotimp.logistic()
 
 The 5 most important features are
 - Number of space hero badges: the more badges the more likely to purchase
-- Number of friend requests ignored: more friend requests ignored means less likely to purchase
 - Times lost spaceship: more times a spaceship has been lost the less likely to purchase
-- Acquired ion weapon: acquired ion weapon means more likely to purchase
+- Number of friend requests ignored: more friend requests ignored means less likely to purchase
+- Game level: the higher the level the more likely to purchase
 - Acquired spaceship: acquired spaceship means more likely to purchase
 
 ``` {r}
@@ -116,7 +118,7 @@ gainsplot(pred_lr_test, label.var = cg_organic_test$converted)
 ```
 
 
-## Part 3
+## Part III
 
 ### Question 1
 
@@ -155,9 +157,9 @@ cat("\nProfit: ", dollar(profitAd, .01))
 ```{r}
 cg_ad_scoring <- cg_ad_treatment[-sample_random_30000,]
 
-cg_ad_scoring <- cg_ad_scoring %>% mutate(pred_prob = predict(lr, newdata=cg_ad_scoring, type="response"))
+cg_ad_scoring <- cg_ad_scoring %>% mutate(pred_lr = predict(lr, newdata=cg_ad_scoring, type="response"))
 
-cg_ad_scoring <- cg_ad_scoring %>% arrange(desc(pred_prob))
+cg_ad_scoring <- cg_ad_scoring %>% arrange(desc(pred_lr))
 
 cg_best <- head(cg_ad_scoring, 30000)
 
@@ -182,15 +184,78 @@ In summary:
 
 - with advertising to everyone, we can expect 13.0% of people to buy Zalon. Across a sample of 30,000 people this equates to ~$14K in profits
 
-- with targeted advertising to the most likely 30,000 people from a set of 120,000 we can expect 21.0% of people to buy Zalon, and a profit of ~$49K
+- with targeted advertising to the most likely 30,000 people from a set of 120,000 we can expect 22.0% of people to buy Zalon, and a profit of ~$52K
+
+
+Incremental profit from advertising using the model from no advertising is $26K, or double profits.
 
 
 
+### Question 5
 
 
+``` {r}
+cg_ad_scoring %>% arrange(pred_lr)
+
+gainsplot(cg_ad_scoring$pred_lr, label.var = cg_ad_scoring$converted)
+```
 
 
+The AUC for the logistic regression on the ranked sample of 130,000 customers who were shown the advertisement is 0.64. The AUC for test logistic regression model on the test data set was 0.80. 
 
+The area under the curve is lower for the test sample because this sample was not show an advertisement. The model was trained using customers who were not shown the advertisement. Thus the test customers are close in nature to the custoners used to train the model. The customers in the 130,000 customer sample were shown the advertisement. The advertisement clearly affected different customers in different ways, and it does not appear to have a directly linear relationship with the logistic regression prediction variable. 
+
+### Question 6
+
+What is the purpose of group 1 given that we already had data on organic conversions?
+
+This enables us to eliminate any affects that timing might have on the advertisements. For instance, people may be more likely to buy gaming products during a week with bad weather, because more people are stuck at home inside.
+
+## Part IV
+
+### Question 1
+
+```{r}
+lr_retrain <- glm(fm , family = binomial, data = cg_ad_random)
+summary(lr)
+```
+
+## Question 2
+
+``` {r}
+cg_ad_scoring <- cg_ad_scoring %>% mutate(pred_lr = predict(lr_retrain, newdata=cg_ad_scoring, type="response"))
+
+gainsplot(cg_ad_scoring$pred_lr, label.var = cg_ad_scoring$converted)
+```
+
+
+The AUC is higher, at 0.70 versus 0.64, here as customers from both the training data and the test data were show the advertisements.
+
+### Question 3
+
+
+```{r}
+cg_ad_scoring <- cg_ad_scoring %>% arrange(desc(pred_lr))
+
+cg_best <- head(cg_ad_scoring, 30000)
+
+bestConvertVar <- (cg_best %>% summarise(bestConvert = mean(converted)))$bestConvert
+cat("Ad treatment response rate to Zalon: ", percent(bestConvertVar, .01))
+
+profitBest <- nrow(cg_best) * (bestConvertVar* revenuePerPurchase - costToServeAd)
+cat("\nProfit: ", dollar(profitBest, .01))
+```
+
+### Question 4
+
+```{r}
+varimp.logistic(lr) %>% plotimp.logistic()
+varimp.logistic(lr_retrain) %>% plotimp.logistic()
+```
+
+When someone has seen an advertisement, the importance of factors is different from before they saw they the advertisement in predicting their likelihood to purchase. Number of ads clicked is now the most important factor (though this is likely to be misleading because many of these people would have purchased after clicking on the advertisement). THe next most important variable was number of friends. Gamve level was still important. Number of ggam days and whether the user has a new OS were also very important.
+
+The organic model did not take into account the fact that these factors would change in importance, as no one in the training sample had seen an advertisement.
 
 
 
